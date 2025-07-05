@@ -17,7 +17,7 @@ const (
 
 type Configuration struct {
 	Env  Environment `envconfig:"env" default:"dev"`
-	Port string      `envconfig:"port" default:"8080"`
+	Port string      `envconfig:"port"`
 }
 
 func GetConfig() (*Configuration, error) {

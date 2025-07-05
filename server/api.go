@@ -1,9 +1,13 @@
 package server
 
 import (
+	"context"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/dilly3/cloud-run-pub-sub/config"
@@ -40,21 +44,36 @@ func NewServer() *Server {
 	return &Server{Config: *config}
 }
 
-func (s *Server) SetupServer() {
+func (s *Server) SetupServer(port string) *http.Server {
 	router := s.SetupRouter()
 
 	server := &http.Server{
-		Addr:    ":" + s.Config.Port,
+		Addr:    ":" + port,
 		Handler: router,
 	}
 
 	s.httpServer = server
+
+	return server
 }
+
+// func (s *Server) StartServer(logger *slog.Logger) (*http.Server, func()) {
+// 	go func() {
+// 		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+// 			log.Fatalf("Failed to listen and serve: %v", err)
+// 		}
+// 		logger.Info("Server started on port " + s.Config.Port)
+// 	}()
+
+// 	return s.httpServer, func() {
+// 		gracefulShutdown(s.httpServer, logger)
+// 	}
+// }
 
 func (s *Server) SetupRouter() *gin.Engine {
 
 	if s.Config.IsProd() {
-		os.Setenv("GIN_MODE", "release")
+		gin.SetMode(gin.ReleaseMode)
 	}
 
 	router := gin.Default()
@@ -76,4 +95,28 @@ func (s *Server) SetupRouter() *gin.Engine {
 	apiRouter.GET("/transactions/:id", handlerFunc(s.GetTransaction))
 
 	return router
+}
+
+func GracefulShutdown(srv *http.Server, logger *slog.Logger) {
+	// Create context that listens for the interrupt signal from the OS.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	// Listen for the interrupt signal.
+	<-ctx.Done()
+
+	// Restore default behavior on the interrupt signal and notify user of shutdown.
+	stop()
+	logger.Info("shutting down gracefully, press Ctrl+C again to force")
+
+	// The context is used to inform the server it has 5 seconds to finish
+	// the request it is currently handling
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Error("Server forced to shutdown", "server error", err)
+		os.Exit(1)
+	}
+
+	logger.Info("Server exiting")
 }
