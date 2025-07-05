@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var transactions = []models.Transaction{
+var Transactions = []models.Transaction{
 	{
 		ID:            1,
 		Amount:        100,
@@ -36,6 +36,15 @@ var transactions = []models.Transaction{
 		Status:        "pending",
 		Reference:     "1234567123",
 	},
+	{
+		ID:            4,
+		Amount:        400,
+		AccountName:   "John Doe",
+		AccountNumber: "1234567890",
+		Direction:     "in",
+		Status:        "pending",
+		Reference:     "1234567890",
+	},
 }
 
 func (s *Server) HealthCheck(c *Context) {
@@ -43,7 +52,7 @@ func (s *Server) HealthCheck(c *Context) {
 }
 
 func (s *Server) GetTransactions(c *Context) {
-	c.JSON(http.StatusOK, transactions)
+	c.JSON(http.StatusOK, Transactions)
 }
 
 func (s *Server) GetTransaction(c *Context) {
@@ -55,7 +64,7 @@ func (s *Server) GetTransaction(c *Context) {
 		return
 	}
 
-	for _, transaction := range transactions {
+	for _, transaction := range Transactions {
 		if transaction.ID == transactionID {
 			c.JSON(http.StatusOK, transaction)
 			return
