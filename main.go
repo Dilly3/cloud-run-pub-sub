@@ -19,8 +19,8 @@ func main() {
 	}
 	logger.Info("Config", "config", config)
 	publisher := publisher.NewPublisher(config.ProjectID, config.TopicID, logger)
-	s := server.NewServer(logger, publisher)
-	srv := s.SetupServer(s.Config.Port)
+	s := server.NewServer(logger, publisher, config)
+	srv := s.SetupServer(config.Port)
 
 	go server.GracefulShutdown(srv, logger)
 	err = srv.ListenAndServe()
