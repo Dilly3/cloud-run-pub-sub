@@ -16,7 +16,6 @@ const (
 
 type Configuration struct {
 	Env       string
-	Port      string
 	ProjectID string
 	TopicID   string
 }
@@ -29,10 +28,6 @@ func GetConfig(logger *slog.Logger) (*Configuration, error) {
 		return nil, err
 	}
 
-	envPort := os.Getenv("PORT")
-	if envPort != "" {
-		config.Port = envPort
-	}
 	envProjectID := os.Getenv("PROJECT_ID")
 	if envProjectID != "" {
 		config.ProjectID = envProjectID

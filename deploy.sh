@@ -9,7 +9,7 @@ else
 fi
 
 echo "deploying to $PROJECT_NAME"
-gcloud run deploy $PROJECT_NAME --source . --region us-west1 --allow-unauthenticated --platform managed
+gcloud run deploy $PROJECT_NAME --source . --region us-west1 --allow-unauthenticated --platform managed --timeout=300 --set-secrets=TOPIC_ID=TOPIC_ID:latest --set-secrets=PROJECT_ID=PROJECT_ID:latest
 echo "deployed to $PROJECT_NAME"
 
 exit 0

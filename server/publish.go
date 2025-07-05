@@ -20,11 +20,18 @@ func decodePubSubData(data string) ([]byte, error) {
 
 func (s *Server) PublishTransaction(c *Context) {
 	transaction := Transactions[rand.Intn(len(Transactions))]
-	delayInSeconds, err := strconv.ParseInt(c.Query("delay"), 10, 64)
-	if err != nil {
-		s.logger.Error("Failed to parse delay", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse delay"})
-		return
+
+	// Parse delay parameter, default to 0 if not provided
+	delayQuery := c.Query("delay")
+	var delayInSeconds int64 = 0
+	if delayQuery != "" {
+		var err error
+		delayInSeconds, err = strconv.ParseInt(delayQuery, 10, 64)
+		if err != nil {
+			s.logger.Error("Failed to parse delay", "error", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse delay"})
+			return
+		}
 	}
 
 	// publish transaction with delay
