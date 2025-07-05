@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math/rand"
 	"net/http"
+	"strconv"
 
 	"github.com/dilly3/cloud-run-pub-sub/models"
 	"github.com/gin-gonic/gin"
@@ -18,10 +19,16 @@ func decodePubSubData(data string) ([]byte, error) {
 }
 
 func (s *Server) PublishTransaction(c *Context) {
-	// get random transaction from one to three
 	transaction := Transactions[rand.Intn(len(Transactions))]
+	delayInSeconds, err := strconv.ParseInt(c.Query("delay"), 10, 64)
+	if err != nil {
+		s.logger.Error("Failed to parse delay", "error", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse delay"})
+		return
+	}
 
-	id, err := s.publisher.Publish(transaction)
+	// publish transaction with delay
+	id, err := s.publisher.Publish(transaction, delayInSeconds)
 	if err != nil {
 		s.logger.Error("Failed to publish transaction", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to publish transaction"})
