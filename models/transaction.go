@@ -11,5 +11,17 @@ type Transaction struct {
 	Reference     string `json:"reference"`
 	BankName      string `json:"bank_name"`
 	BankCode      string `json:"bank_code"`
-	Narration     string `json:"narration"`
+
+	Narration string `json:"narration"`
+}
+
+// PubSubMessage represents the structure of a Google Cloud Pub/Sub push message
+type PubSubMessage struct {
+	Message struct {
+		Data        string            `json:"data"`
+		Attributes  map[string]string `json:"attributes"`
+		MessageID   string            `json:"messageId"`
+		PublishTime string            `json:"publishTime"`
+	} `json:"message"`
+	Subscription string `json:"subscription"`
 }

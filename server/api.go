@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/dilly3/cloud-run-pub-sub/config"
+	"github.com/dilly3/cloud-run-pub-sub/publisher"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -23,7 +24,8 @@ const (
 type Server struct {
 	httpServer *http.Server
 	Config     config.Configuration
-	//logger     *slog.Logger
+	logger     *slog.Logger
+	publisher  *publisher.Publisher
 }
 
 type Context struct {
@@ -36,12 +38,12 @@ func handlerFunc(f func(*Context)) gin.HandlerFunc {
 	}
 }
 
-func NewServer() *Server {
-	config, err := config.GetConfig()
+func NewServer(logger *slog.Logger, publisher *publisher.Publisher) *Server {
+	config, err := config.GetConfig(logger)
 	if err != nil {
 		log.Printf("Failed to get config: %v", err)
 	}
-	return &Server{Config: *config}
+	return &Server{Config: *config, logger: logger, publisher: publisher}
 }
 
 func (s *Server) SetupServer(port string) *http.Server {
@@ -56,19 +58,6 @@ func (s *Server) SetupServer(port string) *http.Server {
 
 	return server
 }
-
-// func (s *Server) StartServer(logger *slog.Logger) (*http.Server, func()) {
-// 	go func() {
-// 		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-// 			log.Fatalf("Failed to listen and serve: %v", err)
-// 		}
-// 		logger.Info("Server started on port " + s.Config.Port)
-// 	}()
-
-// 	return s.httpServer, func() {
-// 		gracefulShutdown(s.httpServer, logger)
-// 	}
-// }
 
 func (s *Server) SetupRouter() *gin.Engine {
 
@@ -93,6 +82,8 @@ func (s *Server) SetupRouter() *gin.Engine {
 	apiRouter.GET("/health", handlerFunc(s.HealthCheck))
 	apiRouter.GET("/transactions", handlerFunc(s.GetTransactions))
 	apiRouter.GET("/transactions/:id", handlerFunc(s.GetTransaction))
+	apiRouter.GET("/publish", handlerFunc(s.PublishTransaction))
+	apiRouter.POST("/transactions/poll", handlerFunc(s.PollTransaction))
 
 	return router
 }
