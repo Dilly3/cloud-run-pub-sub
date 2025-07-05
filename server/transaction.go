@@ -49,15 +49,19 @@ func (s *Server) GetTransactions(c *Context) {
 func (s *Server) GetTransaction(c *Context) {
 	id := c.Param("id")
 
+	transactionID, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid transaction ID"})
+		return
+	}
+
 	for _, transaction := range transactions {
-		transactionID, err := strconv.Atoi(id)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid transaction ID"})
-			return
-		}
 		if transaction.ID == transactionID {
 			c.JSON(http.StatusOK, transaction)
 			return
 		}
 	}
+
+	// Transaction not found
+	c.JSON(http.StatusNotFound, gin.H{"error": "Transaction not found"})
 }
