@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -38,12 +37,8 @@ func handlerFunc(f func(*Context)) gin.HandlerFunc {
 	}
 }
 
-func NewServer(logger *slog.Logger, publisher *publisher.Publisher) *Server {
-	config, err := config.GetConfig(logger)
-	if err != nil {
-		log.Printf("Failed to get config: %v", err)
-	}
-	return &Server{Config: *config, logger: logger, publisher: publisher}
+func NewServer(logger *slog.Logger, publisher *publisher.Publisher, cfg *config.Configuration) *Server {
+	return &Server{Config: *cfg, logger: logger, publisher: publisher}
 }
 
 func (s *Server) SetupServer(port string) *http.Server {
@@ -82,8 +77,9 @@ func (s *Server) SetupRouter() *gin.Engine {
 	apiRouter.GET("/health", handlerFunc(s.HealthCheck))
 	apiRouter.GET("/transactions", handlerFunc(s.GetTransactions))
 	apiRouter.GET("/transactions/:id", handlerFunc(s.GetTransaction))
-	apiRouter.GET("/publish", handlerFunc(s.PublishTransaction))
+	apiRouter.POST("/transactions/publish", handlerFunc(s.PublishTransaction)) // the endpoint cloud task hits
 	apiRouter.POST("/transactions/poll", handlerFunc(s.PollTransaction))
+	apiRouter.POST("/transactions/queue", handlerFunc(s.QueueTransaction)) // the endpoint to set transaction to queue
 
 	return router
 }

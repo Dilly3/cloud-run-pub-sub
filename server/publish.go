@@ -1,9 +1,6 @@
 package server
 
 import (
-	"encoding/base64"
-	"encoding/json"
-	"io"
 	"log/slog"
 	"math/rand"
 	"net/http"
@@ -12,14 +9,28 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// decodePubSubData decodes base64 data from Pub/Sub message
-func decodePubSubData(data string) ([]byte, error) {
-	return base64.StdEncoding.DecodeString(data)
+func (s *Server) QueueTransaction(c *Context) {
+	// random transaction
+	transaction := Transactions[rand.Intn(len(Transactions))]
+
+	name, err := s.publisher.QueueTask(transaction, s.Config.TaskDelay)
+	if err != nil {
+		s.logger.Error("Failed to queue transaction", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to queue transaction"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Transaction queued", "name": name})
 }
 
 func (s *Server) PublishTransaction(c *Context) {
-	// get random transaction from one to three
-	transaction := Transactions[rand.Intn(len(Transactions))]
+
+	var transaction models.Transaction
+	if err := s.publisher.DecodeQueueData(c.Request.Body, &transaction); err != nil {
+		s.logger.Error("Failed to decode transaction", "error", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to decode transaction"})
+		return
+	}
 
 	id, err := s.publisher.Publish(transaction)
 	if err != nil {
@@ -33,56 +44,15 @@ func (s *Server) PublishTransaction(c *Context) {
 
 func (s *Server) PollTransaction(c *Context) {
 	// Read the request body from the push notification
-	body, err := io.ReadAll(c.Request.Body)
-	if err != nil {
-		s.logger.Error("Failed to read request body", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
-		return
-	}
-
-	// parse as a Pub/Sub push message
-	var pubSubMessage models.PubSubMessage
-	if err := json.Unmarshal(body, &pubSubMessage); err == nil {
-		// This is a Pub/Sub push message, extract the data
-		if pubSubMessage.Message.Data == "" {
-			s.logger.Error("Pub/Sub message has no data")
-			c.JSON(http.StatusBadRequest, gin.H{"error": "No data in message"})
-			return
-		}
-
-		// Decode the base64 data from Pub/Sub message
-		decodedData, err := decodePubSubData(pubSubMessage.Message.Data)
-		if err != nil {
-			s.logger.Error("Failed to decode base64 data from Pub/Sub message", "error", err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid base64 data"})
-			return
-		}
-
-		var transaction models.Transaction
-		if err := json.Unmarshal(decodedData, &transaction); err != nil {
-			s.logger.Error("Failed to unmarshal transaction from Pub/Sub data", "error", err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid transaction data"})
-			return
-		}
-
-		s.logger.Info("Transaction received from Pub/Sub",
-			"messageId", pubSubMessage.Message.MessageID,
-			"subscription", pubSubMessage.Subscription,
-			"transactionId", transaction.ID,
-			"amount", transaction.Amount,
-			"status", transaction.Status,
-		)
-
-		// Return 200 to acknowledge the message
-		c.JSON(http.StatusOK, gin.H{"message": "Transaction processed successfully"})
-		return
-	}
-
-	// If not a Pub/Sub message, try to parse as direct transaction JSON
 	var transaction models.Transaction
-	if err := json.Unmarshal(body, &transaction); err != nil {
-		s.logger.Error("Failed to unmarshal transaction", "error", err, "body", string(body))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format"})
+	if err := s.publisher.DecodePubSubData(c.Request.Body, &transaction); err != nil {
+		s.logger.Error("Failed to decode transaction", "error", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to decode transaction"})
+		return
+	}
+	if transaction.ID == 2 {
+		s.logger.Error("Transaction ID is 2")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Transaction ID is 2, this is a test for failure"})
 		return
 	}
 
@@ -97,9 +67,6 @@ func (s *Server) PollTransaction(c *Context) {
 		),
 	)
 	child.Info("Transaction polled directly")
-
-	// Process the transaction here
-	// TODO: Add your business logic
 
 	c.JSON(http.StatusOK, gin.H{"message": "Transaction polled", "transaction": transaction})
 }
