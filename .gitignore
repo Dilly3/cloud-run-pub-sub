@@ -1,2 +1,3 @@
 pub-sub1*.json
 .env
+.env_sample*

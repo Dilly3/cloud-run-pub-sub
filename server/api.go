@@ -77,8 +77,9 @@ func (s *Server) SetupRouter() *gin.Engine {
 	apiRouter.GET("/health", handlerFunc(s.HealthCheck))
 	apiRouter.GET("/transactions", handlerFunc(s.GetTransactions))
 	apiRouter.GET("/transactions/:id", handlerFunc(s.GetTransaction))
-	apiRouter.GET("/publish", handlerFunc(s.PublishTransaction))
+	apiRouter.POST("/transactions/publish", handlerFunc(s.PublishTransaction)) // the endpoint cloud task hits
 	apiRouter.POST("/transactions/poll", handlerFunc(s.PollTransaction))
+	apiRouter.POST("/transactions/queue", handlerFunc(s.QueueTransaction)) // the endpoint to set transaction to queue
 
 	return router
 }

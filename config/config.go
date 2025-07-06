@@ -3,6 +3,7 @@ package config
 import (
 	"log/slog"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -15,17 +16,51 @@ const (
 )
 
 type Configuration struct {
-	Env       string
-	ProjectID string
-	TopicID   string
+	Env         string
+	ProjectID   string
+	TopicID     string
+	Port        string
+	PublishURL  string
+	Location    string
+	TaskQueueID string
+	TaskDelay   int64
 }
 
 func GetConfig(logger *slog.Logger) (*Configuration, error) {
 	var config Configuration
-	err := godotenv.Load()
+	err := godotenv.Load(".env_sample_var")
 	if err != nil {
 		logger.Error("Error loading .env file", "error", err)
 		return nil, err
+	}
+
+	envPort := os.Getenv("PORT")
+	if envPort != "" {
+		config.Port = envPort
+	}
+
+	envPublishURL := os.Getenv("PUBLISH_URL")
+	if envPublishURL != "" {
+		config.PublishURL = envPublishURL
+	}
+
+	envTaskQueueID := os.Getenv("TASK_QUEUE_ID")
+	if envTaskQueueID != "" {
+		config.TaskQueueID = envTaskQueueID
+	}
+
+	envLocation := os.Getenv("LOCATION")
+	if envLocation != "" {
+		config.Location = envLocation
+	}
+
+	envTaskDelay := os.Getenv("TASK_DELAY")
+	if envTaskDelay != "" {
+		config.TaskDelay, err = strconv.ParseInt(envTaskDelay, 10, 64)
+		if err != nil {
+			logger.Error("Error parsing TASK_DELAY", "error", err)
+			return nil, err
+		}
 	}
 
 	envProjectID := os.Getenv("PROJECT_ID")

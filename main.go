@@ -18,14 +18,10 @@ func main() {
 		os.Exit(1)
 	}
 	logger.Info("Config", "config", config)
-	publisher := publisher.NewPublisher(config.ProjectID, config.TopicID, logger)
+	publisher := publisher.NewPublisher(config.ProjectID, config.TopicID, logger, config)
 	s := server.NewServer(logger, publisher, config)
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-		logger.Info("defaulting to port", "port", port)
-	}
-	srv := s.SetupServer(port)
+
+	srv := s.SetupServer(config.Port)
 
 	go server.GracefulShutdown(srv, logger)
 	err = srv.ListenAndServe()
